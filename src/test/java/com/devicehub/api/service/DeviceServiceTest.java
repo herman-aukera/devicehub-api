@@ -4,6 +4,7 @@ import com.devicehub.api.domain.Device;
 import com.devicehub.api.domain.DeviceState;
 import com.devicehub.api.dto.DeviceCreateRequest;
 import com.devicehub.api.dto.DeviceResponse;
+import com.devicehub.api.exception.DeviceNotFoundException;
 import com.devicehub.api.repository.DeviceRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -12,8 +13,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -114,5 +118,116 @@ class DeviceServiceTest {
         assertThat(response.name()).isEqualTo(request.name());
         assertThat(response.brand()).isEqualTo(request.brand());
         assertThat(response.state()).isEqualTo(request.state());
+    }
+
+    // READ OPERATIONS TESTS
+
+    @Test
+    void shouldReturnDevice_whenIdExists() {
+        // Given - existing device
+        Long deviceId = 1L;
+        Device device = Device.builder()
+                .id(deviceId)
+                .name("MacBook Pro")
+                .brand("Apple")
+                .state(DeviceState.AVAILABLE)
+                .creationTime(LocalDateTime.now())
+                .build();
+
+        when(deviceRepository.findById(deviceId)).thenReturn(Optional.of(device));
+
+        // When - finding device by ID
+        DeviceResponse response = deviceService.findById(deviceId);
+
+        // Then - device should be returned
+        assertThat(response).isNotNull();
+        assertThat(response.id()).isEqualTo(deviceId);
+        assertThat(response.name()).isEqualTo("MacBook Pro");
+        verify(deviceRepository).findById(deviceId);
+    }
+
+    @Test
+    void shouldThrowDeviceNotFoundException_whenIdDoesNotExist() {
+        // Given - non-existent ID
+        Long deviceId = 999L;
+        when(deviceRepository.findById(deviceId)).thenReturn(Optional.empty());
+
+        // When & Then - should throw exception
+        assertThatThrownBy(() -> deviceService.findById(deviceId))
+                .isInstanceOf(DeviceNotFoundException.class)
+                .hasMessageContaining("Device not found with id: 999");
+
+        verify(deviceRepository).findById(deviceId);
+    }
+
+    @Test
+    void shouldReturnAllDevices_whenNoFiltersApplied() {
+        // Given - multiple devices
+        List<Device> devices = List.of(
+                createDevice(1L, "MacBook Pro", "Apple", DeviceState.AVAILABLE),
+                createDevice(2L, "iPhone 15", "Apple", DeviceState.IN_USE),
+                createDevice(3L, "Galaxy S24", "Samsung", DeviceState.AVAILABLE)
+        );
+
+        when(deviceRepository.findAll()).thenReturn(devices);
+
+        // When - finding all devices
+        List<DeviceResponse> responses = deviceService.findAll();
+
+        // Then - all devices should be returned
+        assertThat(responses).hasSize(3);
+        assertThat(responses).extracting(DeviceResponse::name)
+                .containsExactly("MacBook Pro", "iPhone 15", "Galaxy S24");
+        verify(deviceRepository).findAll();
+    }
+
+    @Test
+    void shouldReturnFilteredDevices_whenBrandProvided() {
+        // Given - devices filtered by brand
+        List<Device> appleDevices = List.of(
+                createDevice(1L, "MacBook Pro", "Apple", DeviceState.AVAILABLE),
+                createDevice(2L, "iPhone 15", "Apple", DeviceState.IN_USE)
+        );
+
+        when(deviceRepository.findByBrandIgnoreCase("Apple")).thenReturn(appleDevices);
+
+        // When - finding by brand
+        List<DeviceResponse> responses = deviceService.findByBrand("Apple");
+
+        // Then - only Apple devices should be returned
+        assertThat(responses).hasSize(2);
+        assertThat(responses).extracting(DeviceResponse::brand)
+                .containsOnly("Apple");
+        verify(deviceRepository).findByBrandIgnoreCase("Apple");
+    }
+
+    @Test
+    void shouldReturnFilteredDevices_whenStateProvided() {
+        // Given - devices filtered by state
+        List<Device> availableDevices = List.of(
+                createDevice(1L, "MacBook Pro", "Apple", DeviceState.AVAILABLE),
+                createDevice(2L, "Galaxy S24", "Samsung", DeviceState.AVAILABLE)
+        );
+
+        when(deviceRepository.findByState(DeviceState.AVAILABLE)).thenReturn(availableDevices);
+
+        // When - finding by state
+        List<DeviceResponse> responses = deviceService.findByState(DeviceState.AVAILABLE);
+
+        // Then - only AVAILABLE devices should be returned
+        assertThat(responses).hasSize(2);
+        assertThat(responses).extracting(DeviceResponse::state)
+                .containsOnly(DeviceState.AVAILABLE);
+        verify(deviceRepository).findByState(DeviceState.AVAILABLE);
+    }
+
+    private Device createDevice(Long id, String name, String brand, DeviceState state) {
+        return Device.builder()
+                .id(id)
+                .name(name)
+                .brand(brand)
+                .state(state)
+                .creationTime(LocalDateTime.now())
+                .build();
     }
 }

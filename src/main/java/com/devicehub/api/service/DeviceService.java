@@ -1,13 +1,17 @@
 package com.devicehub.api.service;
 
 import com.devicehub.api.domain.Device;
+import com.devicehub.api.domain.DeviceState;
 import com.devicehub.api.dto.DeviceCreateRequest;
 import com.devicehub.api.dto.DeviceResponse;
+import com.devicehub.api.exception.DeviceNotFoundException;
 import com.devicehub.api.repository.DeviceRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 /**
  * Service layer for device management operations.
@@ -36,6 +40,69 @@ public class DeviceService {
 
         log.info("Device created successfully: id={}", savedDevice.getId());
         return toResponse(savedDevice);
+    }
+
+    /**
+     * Find a device by ID.
+     *
+     * @param id the device ID
+     * @return the device response
+     * @throws DeviceNotFoundException if device not found
+     */
+    @Transactional(readOnly = true)
+    public DeviceResponse findById(Long id) {
+        log.debug("Finding device by id={}", id);
+        
+        return deviceRepository.findById(id)
+                .map(this::toResponse)
+                .orElseThrow(() -> {
+                    log.warn("Device not found: id={}", id);
+                    return new DeviceNotFoundException(id);
+                });
+    }
+
+    /**
+     * Find all devices.
+     *
+     * @return list of all devices
+     */
+    @Transactional(readOnly = true)
+    public List<DeviceResponse> findAll() {
+        log.debug("Finding all devices");
+        
+        return deviceRepository.findAll().stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    /**
+     * Find devices by brand.
+     *
+     * @param brand the brand to filter by
+     * @return list of devices matching the brand
+     */
+    @Transactional(readOnly = true)
+    public List<DeviceResponse> findByBrand(String brand) {
+        log.debug("Finding devices by brand={}", brand);
+        
+        return deviceRepository.findByBrandIgnoreCase(brand).stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    /**
+     * Find devices by state.
+     *
+     * @param state the state to filter by
+     * @return list of devices in the specified state
+     */
+    @Transactional(readOnly = true)
+    public List<DeviceResponse> findByState(DeviceState state) {
+        log.debug("Finding devices by state={}", state);
+        
+        return deviceRepository.findByState(state).stream()
+                .map(this::toResponse)
+                .toList();
     }
 
     /**
