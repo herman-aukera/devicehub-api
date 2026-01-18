@@ -42,10 +42,10 @@ class DeviceTest {
                 .brand("Apple")
                 .state(DeviceState.AVAILABLE)
                 .build();
-        
+
         Device savedDevice = entityManager.persistAndFlush(device);
         var originalCreationTime = savedDevice.getCreationTime();
-        
+
         entityManager.clear();
 
         // When - updating device
