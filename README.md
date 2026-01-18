@@ -69,14 +69,14 @@ docker-compose down
 
 ### Device Management
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/devices` | Create a new device |
-| `GET` | `/api/devices/{id}` | Get device by ID |
-| `GET` | `/api/devices` | List all devices (supports filtering) |
-| `PUT` | `/api/devices/{id}` | Update device (full) |
-| `PATCH` | `/api/devices/{id}` | Update device (partial) |
-| `DELETE` | `/api/devices/{id}` | Delete device |
+| Method   | Endpoint            | Description                           |
+| -------- | ------------------- | ------------------------------------- |
+| `POST`   | `/api/devices`      | Create a new device                   |
+| `GET`    | `/api/devices/{id}` | Get device by ID                      |
+| `GET`    | `/api/devices`      | List all devices (supports filtering) |
+| `PUT`    | `/api/devices/{id}` | Update device (full)                  |
+| `PATCH`  | `/api/devices/{id}` | Update device (partial)               |
+| `DELETE` | `/api/devices/{id}` | Delete device                         |
 
 ### Query Parameters
 
@@ -85,9 +85,9 @@ docker-compose down
 
 ### Health Check
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/actuator/health` | Application health status |
+| Method | Endpoint           | Description               |
+| ------ | ------------------ | ------------------------- |
+| `GET`  | `/actuator/health` | Application health status |
 
 ### API Documentation
 

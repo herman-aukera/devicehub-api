@@ -230,7 +230,7 @@ class DeviceServiceTest {
         // Given - device with AVAILABLE state
         Long deviceId = 1L;
         Device existingDevice = createDevice(deviceId, "MacBook Pro", "Apple", DeviceState.AVAILABLE);
-        
+
         DeviceUpdateRequest updateRequest = new DeviceUpdateRequest(
                 "MacBook Pro 16", // name changed
                 "Apple",
@@ -262,7 +262,7 @@ class DeviceServiceTest {
         // Given - device with IN_USE state
         Long deviceId = 1L;
         Device existingDevice = createDevice(deviceId, "MacBook Pro", "Apple", DeviceState.IN_USE);
-        
+
         DeviceUpdateRequest updateRequest = new DeviceUpdateRequest(
                 "MacBook Pro 16", // attempting to change name
                 "Apple",
@@ -285,7 +285,7 @@ class DeviceServiceTest {
         // Given - device with IN_USE state
         Long deviceId = 1L;
         Device existingDevice = createDevice(deviceId, "MacBook Pro", "Apple", DeviceState.IN_USE);
-        
+
         DeviceUpdateRequest updateRequest = new DeviceUpdateRequest(
                 "MacBook Pro",
                 "Apple Inc", // attempting to change brand
@@ -308,7 +308,7 @@ class DeviceServiceTest {
         // Given - device with IN_USE state
         Long deviceId = 1L;
         Device existingDevice = createDevice(deviceId, "MacBook Pro", "Apple", DeviceState.IN_USE);
-        
+
         DeviceUpdateRequest updateRequest = new DeviceUpdateRequest(
                 "MacBook Pro", // same name
                 "Apple",       // same brand
@@ -346,7 +346,7 @@ class DeviceServiceTest {
                 .state(DeviceState.AVAILABLE)
                 .creationTime(originalCreationTime)
                 .build();
-        
+
         DeviceUpdateRequest updateRequest = new DeviceUpdateRequest(
                 "MacBook Pro Updated",
                 "Apple",
@@ -376,7 +376,7 @@ class DeviceServiceTest {
         // Given - device with all fields
         Long deviceId = 1L;
         Device existingDevice = createDevice(deviceId, "MacBook Pro", "Apple", DeviceState.AVAILABLE);
-        
+
         DeviceUpdateRequest updateRequest = new DeviceUpdateRequest(
                 null,  // name not provided
                 null,  // brand not provided
@@ -408,7 +408,7 @@ class DeviceServiceTest {
         // Given - device with IN_USE state
         Long deviceId = 1L;
         Device existingDevice = createDevice(deviceId, "MacBook Pro", "Apple", DeviceState.IN_USE);
-        
+
         DeviceUpdateRequest updateRequest = new DeviceUpdateRequest(
                 "MacBook Pro 16", // attempting to change name
                 null,             // brand not provided
@@ -478,4 +478,3 @@ class DeviceServiceTest {
                 .build();
     }
 }
-

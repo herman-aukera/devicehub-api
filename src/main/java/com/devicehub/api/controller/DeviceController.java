@@ -59,7 +59,7 @@ public class DeviceController {
     )
     public ResponseEntity<DeviceResponse> createDevice(
             @Valid @RequestBody DeviceCreateRequest request) {
-        log.info("POST /api/devices - Creating device: name={}, brand={}", 
+        log.info("POST /api/devices - Creating device: name={}, brand={}",
                 request.name(), request.brand());
 
         DeviceResponse response = deviceService.create(request);

@@ -135,7 +135,7 @@ public class DeviceService {
 
         Device savedDevice = deviceRepository.save(existingDevice);
         log.info("Device updated successfully: id={}", id);
-        
+
         return toResponse(savedDevice);
     }
 
@@ -173,7 +173,7 @@ public class DeviceService {
 
         Device savedDevice = deviceRepository.save(existingDevice);
         log.info("Device partially updated successfully: id={}", id);
-        
+
         return toResponse(savedDevice);
     }
 
@@ -195,7 +195,7 @@ public class DeviceService {
                 });
 
         if (device.getState() == DeviceState.IN_USE) {
-            log.warn("Delete blocked: cannot delete IN_USE device: id={}, state={}", 
+            log.warn("Delete blocked: cannot delete IN_USE device: id={}, state={}",
                     device.getId(), device.getState());
             throw new BusinessRuleViolationException(
                     "Cannot delete device with state IN_USE");
@@ -213,13 +213,13 @@ public class DeviceService {
         // Use pattern matching switch for state-based validation
         switch (existingDevice.getState()) {
             case IN_USE -> {
-                boolean nameChanged = request.name() != null && 
+                boolean nameChanged = request.name() != null &&
                         !request.name().equals(existingDevice.getName());
-                boolean brandChanged = request.brand() != null && 
+                boolean brandChanged = request.brand() != null &&
                         !request.brand().equals(existingDevice.getBrand());
 
                 if (nameChanged || brandChanged) {
-                    log.warn("Update blocked: cannot modify name/brand for IN_USE device: id={}, state={}", 
+                    log.warn("Update blocked: cannot modify name/brand for IN_USE device: id={}, state={}",
                             existingDevice.getId(), existingDevice.getState());
                     throw new BusinessRuleViolationException(
                             "Cannot update name or brand when device state is IN_USE");
