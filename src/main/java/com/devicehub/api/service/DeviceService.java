@@ -4,6 +4,8 @@ import com.devicehub.api.domain.Device;
 import com.devicehub.api.domain.DeviceState;
 import com.devicehub.api.dto.DeviceCreateRequest;
 import com.devicehub.api.dto.DeviceResponse;
+import com.devicehub.api.dto.DeviceUpdateRequest;
+import com.devicehub.api.exception.BusinessRuleViolationException;
 import com.devicehub.api.exception.DeviceNotFoundException;
 import com.devicehub.api.repository.DeviceRepository;
 import lombok.RequiredArgsConstructor;
@@ -32,7 +34,7 @@ public class DeviceService {
      */
     @Transactional
     public DeviceResponse create(DeviceCreateRequest request) {
-        log.info("Creating device: name={}, brand={}, state={}", 
+        log.info("Creating device: name={}, brand={}, state={}",
                 request.name(), request.brand(), request.state());
 
         Device device = toEntity(request);
@@ -52,7 +54,7 @@ public class DeviceService {
     @Transactional(readOnly = true)
     public DeviceResponse findById(Long id) {
         log.debug("Finding device by id={}", id);
-        
+
         return deviceRepository.findById(id)
                 .map(this::toResponse)
                 .orElseThrow(() -> {
@@ -69,7 +71,7 @@ public class DeviceService {
     @Transactional(readOnly = true)
     public List<DeviceResponse> findAll() {
         log.debug("Finding all devices");
-        
+
         return deviceRepository.findAll().stream()
                 .map(this::toResponse)
                 .toList();
@@ -84,7 +86,7 @@ public class DeviceService {
     @Transactional(readOnly = true)
     public List<DeviceResponse> findByBrand(String brand) {
         log.debug("Finding devices by brand={}", brand);
-        
+
         return deviceRepository.findByBrandIgnoreCase(brand).stream()
                 .map(this::toResponse)
                 .toList();
@@ -99,10 +101,106 @@ public class DeviceService {
     @Transactional(readOnly = true)
     public List<DeviceResponse> findByState(DeviceState state) {
         log.debug("Finding devices by state={}", state);
-        
+
         return deviceRepository.findByState(state).stream()
                 .map(this::toResponse)
                 .toList();
+    }
+
+    /**
+     * Full update of a device.
+     *
+     * @param id the device ID
+     * @param request the update request with all fields
+     * @return the updated device response
+     * @throws DeviceNotFoundException if device not found
+     * @throws BusinessRuleViolationException if update violates business rules
+     */
+    @Transactional
+    public DeviceResponse update(Long id, DeviceUpdateRequest request) {
+        log.info("Updating device: id={}", id);
+
+        Device existingDevice = deviceRepository.findById(id)
+                .orElseThrow(() -> {
+                    log.warn("Device not found: id={}", id);
+                    return new DeviceNotFoundException(id);
+                });
+
+        validateUpdateAllowed(existingDevice, request);
+
+        // Update all fields (creationTime is immutable in entity)
+        existingDevice.setName(request.name());
+        existingDevice.setBrand(request.brand());
+        existingDevice.setState(request.state());
+
+        Device savedDevice = deviceRepository.save(existingDevice);
+        log.info("Device updated successfully: id={}", id);
+        
+        return toResponse(savedDevice);
+    }
+
+    /**
+     * Partial update of a device (PATCH).
+     *
+     * @param id the device ID
+     * @param request the update request with optional fields
+     * @return the updated device response
+     * @throws DeviceNotFoundException if device not found
+     * @throws BusinessRuleViolationException if update violates business rules
+     */
+    @Transactional
+    public DeviceResponse partialUpdate(Long id, DeviceUpdateRequest request) {
+        log.info("Partially updating device: id={}", id);
+
+        Device existingDevice = deviceRepository.findById(id)
+                .orElseThrow(() -> {
+                    log.warn("Device not found: id={}", id);
+                    return new DeviceNotFoundException(id);
+                });
+
+        validateUpdateAllowed(existingDevice, request);
+
+        // Update only provided fields
+        if (request.name() != null) {
+            existingDevice.setName(request.name());
+        }
+        if (request.brand() != null) {
+            existingDevice.setBrand(request.brand());
+        }
+        if (request.state() != null) {
+            existingDevice.setState(request.state());
+        }
+
+        Device savedDevice = deviceRepository.save(existingDevice);
+        log.info("Device partially updated successfully: id={}", id);
+        
+        return toResponse(savedDevice);
+    }
+
+    /**
+     * Validate if update is allowed based on business rules.
+     * Uses pattern matching for cleaner state validation.
+     */
+    private void validateUpdateAllowed(Device existingDevice, DeviceUpdateRequest request) {
+        // Use pattern matching switch for state-based validation
+        switch (existingDevice.getState()) {
+            case IN_USE -> {
+                boolean nameChanged = request.name() != null && 
+                        !request.name().equals(existingDevice.getName());
+                boolean brandChanged = request.brand() != null && 
+                        !request.brand().equals(existingDevice.getBrand());
+
+                if (nameChanged || brandChanged) {
+                    log.warn("Update blocked: cannot modify name/brand for IN_USE device: id={}, state={}", 
+                            existingDevice.getId(), existingDevice.getState());
+                    throw new BusinessRuleViolationException(
+                            "Cannot update name or brand when device state is IN_USE");
+                }
+            }
+            case AVAILABLE, INACTIVE -> {
+                // No restrictions for these states
+            }
+        }
     }
 
     /**

@@ -28,7 +28,7 @@ class DeviceRepositoryTest {
         Device apple1 = createDevice("MacBook Pro", "Apple", DeviceState.AVAILABLE);
         Device apple2 = createDevice("iPhone 15", "Apple", DeviceState.IN_USE);
         Device samsung = createDevice("Galaxy S24", "Samsung", DeviceState.AVAILABLE);
-        
+
         entityManager.persist(apple1);
         entityManager.persist(apple2);
         entityManager.persist(samsung);
@@ -50,7 +50,7 @@ class DeviceRepositoryTest {
         Device available2 = createDevice("Surface Pro", "Microsoft", DeviceState.AVAILABLE);
         Device inUse = createDevice("ThinkPad X1", "Lenovo", DeviceState.IN_USE);
         Device inactive = createDevice("Old Laptop", "Dell", DeviceState.INACTIVE);
-        
+
         entityManager.persist(available1);
         entityManager.persist(available2);
         entityManager.persist(inUse);

@@ -4,6 +4,8 @@ import com.devicehub.api.domain.Device;
 import com.devicehub.api.domain.DeviceState;
 import com.devicehub.api.dto.DeviceCreateRequest;
 import com.devicehub.api.dto.DeviceResponse;
+import com.devicehub.api.dto.DeviceUpdateRequest;
+import com.devicehub.api.exception.BusinessRuleViolationException;
 import com.devicehub.api.exception.DeviceNotFoundException;
 import com.devicehub.api.repository.DeviceRepository;
 import org.junit.jupiter.api.Test;
@@ -221,6 +223,207 @@ class DeviceServiceTest {
         verify(deviceRepository).findByState(DeviceState.AVAILABLE);
     }
 
+    // UPDATE OPERATIONS TESTS
+
+    @Test
+    void shouldUpdateDevice_whenStateIsNotInUse() {
+        // Given - device with AVAILABLE state
+        Long deviceId = 1L;
+        Device existingDevice = createDevice(deviceId, "MacBook Pro", "Apple", DeviceState.AVAILABLE);
+        
+        DeviceUpdateRequest updateRequest = new DeviceUpdateRequest(
+                "MacBook Pro 16", // name changed
+                "Apple",
+                DeviceState.AVAILABLE
+        );
+
+        Device updatedDevice = Device.builder()
+                .id(deviceId)
+                .name("MacBook Pro 16")
+                .brand("Apple")
+                .state(DeviceState.AVAILABLE)
+                .creationTime(existingDevice.getCreationTime())
+                .build();
+
+        when(deviceRepository.findById(deviceId)).thenReturn(Optional.of(existingDevice));
+        when(deviceRepository.save(any(Device.class))).thenReturn(updatedDevice);
+
+        // When - updating device
+        DeviceResponse response = deviceService.update(deviceId, updateRequest);
+
+        // Then - device should be updated
+        assertThat(response.name()).isEqualTo("MacBook Pro 16");
+        verify(deviceRepository).findById(deviceId);
+        verify(deviceRepository).save(any(Device.class));
+    }
+
+    @Test
+    void shouldThrowBusinessRuleViolationException_whenUpdatingNameWithStateInUse() {
+        // Given - device with IN_USE state
+        Long deviceId = 1L;
+        Device existingDevice = createDevice(deviceId, "MacBook Pro", "Apple", DeviceState.IN_USE);
+        
+        DeviceUpdateRequest updateRequest = new DeviceUpdateRequest(
+                "MacBook Pro 16", // attempting to change name
+                "Apple",
+                DeviceState.IN_USE
+        );
+
+        when(deviceRepository.findById(deviceId)).thenReturn(Optional.of(existingDevice));
+
+        // When & Then - should throw exception
+        assertThatThrownBy(() -> deviceService.update(deviceId, updateRequest))
+                .isInstanceOf(BusinessRuleViolationException.class)
+                .hasMessageContaining("Cannot update name or brand")
+                .hasMessageContaining("IN_USE");
+
+        verify(deviceRepository).findById(deviceId);
+    }
+
+    @Test
+    void shouldThrowBusinessRuleViolationException_whenUpdatingBrandWithStateInUse() {
+        // Given - device with IN_USE state
+        Long deviceId = 1L;
+        Device existingDevice = createDevice(deviceId, "MacBook Pro", "Apple", DeviceState.IN_USE);
+        
+        DeviceUpdateRequest updateRequest = new DeviceUpdateRequest(
+                "MacBook Pro",
+                "Apple Inc", // attempting to change brand
+                DeviceState.IN_USE
+        );
+
+        when(deviceRepository.findById(deviceId)).thenReturn(Optional.of(existingDevice));
+
+        // When & Then - should throw exception
+        assertThatThrownBy(() -> deviceService.update(deviceId, updateRequest))
+                .isInstanceOf(BusinessRuleViolationException.class)
+                .hasMessageContaining("Cannot update name or brand")
+                .hasMessageContaining("IN_USE");
+
+        verify(deviceRepository).findById(deviceId);
+    }
+
+    @Test
+    void shouldAllowStateChange_whenDeviceIsInUse() {
+        // Given - device with IN_USE state
+        Long deviceId = 1L;
+        Device existingDevice = createDevice(deviceId, "MacBook Pro", "Apple", DeviceState.IN_USE);
+        
+        DeviceUpdateRequest updateRequest = new DeviceUpdateRequest(
+                "MacBook Pro", // same name
+                "Apple",       // same brand
+                DeviceState.AVAILABLE // state change allowed
+        );
+
+        Device updatedDevice = Device.builder()
+                .id(deviceId)
+                .name("MacBook Pro")
+                .brand("Apple")
+                .state(DeviceState.AVAILABLE)
+                .creationTime(existingDevice.getCreationTime())
+                .build();
+
+        when(deviceRepository.findById(deviceId)).thenReturn(Optional.of(existingDevice));
+        when(deviceRepository.save(any(Device.class))).thenReturn(updatedDevice);
+
+        // When - updating state only
+        DeviceResponse response = deviceService.update(deviceId, updateRequest);
+
+        // Then - state should be updated
+        assertThat(response.state()).isEqualTo(DeviceState.AVAILABLE);
+        verify(deviceRepository).save(any(Device.class));
+    }
+
+    @Test
+    void shouldIgnoreCreationTime_whenProvidedInUpdateRequest() {
+        // Given - device with original creation time
+        Long deviceId = 1L;
+        LocalDateTime originalCreationTime = LocalDateTime.of(2026, 1, 1, 12, 0);
+        Device existingDevice = Device.builder()
+                .id(deviceId)
+                .name("MacBook Pro")
+                .brand("Apple")
+                .state(DeviceState.AVAILABLE)
+                .creationTime(originalCreationTime)
+                .build();
+        
+        DeviceUpdateRequest updateRequest = new DeviceUpdateRequest(
+                "MacBook Pro Updated",
+                "Apple",
+                DeviceState.AVAILABLE
+        );
+
+        Device updatedDevice = Device.builder()
+                .id(deviceId)
+                .name("MacBook Pro Updated")
+                .brand("Apple")
+                .state(DeviceState.AVAILABLE)
+                .creationTime(originalCreationTime) // should remain unchanged
+                .build();
+
+        when(deviceRepository.findById(deviceId)).thenReturn(Optional.of(existingDevice));
+        when(deviceRepository.save(any(Device.class))).thenReturn(updatedDevice);
+
+        // When - updating device
+        DeviceResponse response = deviceService.update(deviceId, updateRequest);
+
+        // Then - creationTime should not change
+        assertThat(response.creationTime()).isEqualTo(originalCreationTime);
+    }
+
+    @Test
+    void shouldPartiallyUpdateDevice_whenOnlySomeFieldsProvided() {
+        // Given - device with all fields
+        Long deviceId = 1L;
+        Device existingDevice = createDevice(deviceId, "MacBook Pro", "Apple", DeviceState.AVAILABLE);
+        
+        DeviceUpdateRequest updateRequest = new DeviceUpdateRequest(
+                null,  // name not provided
+                null,  // brand not provided
+                DeviceState.INACTIVE // only state provided
+        );
+
+        Device updatedDevice = Device.builder()
+                .id(deviceId)
+                .name("MacBook Pro") // unchanged
+                .brand("Apple")      // unchanged
+                .state(DeviceState.INACTIVE) // changed
+                .creationTime(existingDevice.getCreationTime())
+                .build();
+
+        when(deviceRepository.findById(deviceId)).thenReturn(Optional.of(existingDevice));
+        when(deviceRepository.save(any(Device.class))).thenReturn(updatedDevice);
+
+        // When - partially updating device
+        DeviceResponse response = deviceService.partialUpdate(deviceId, updateRequest);
+
+        // Then - only state should be updated
+        assertThat(response.name()).isEqualTo("MacBook Pro");
+        assertThat(response.brand()).isEqualTo("Apple");
+        assertThat(response.state()).isEqualTo(DeviceState.INACTIVE);
+    }
+
+    @Test
+    void shouldThrowBusinessRuleViolationException_whenPartialUpdateChangesNameOnInUseDevice() {
+        // Given - device with IN_USE state
+        Long deviceId = 1L;
+        Device existingDevice = createDevice(deviceId, "MacBook Pro", "Apple", DeviceState.IN_USE);
+        
+        DeviceUpdateRequest updateRequest = new DeviceUpdateRequest(
+                "MacBook Pro 16", // attempting to change name
+                null,             // brand not provided
+                null              // state not provided
+        );
+
+        when(deviceRepository.findById(deviceId)).thenReturn(Optional.of(existingDevice));
+
+        // When & Then - should throw exception
+        assertThatThrownBy(() -> deviceService.partialUpdate(deviceId, updateRequest))
+                .isInstanceOf(BusinessRuleViolationException.class)
+                .hasMessageContaining("Cannot update name or brand")
+                .hasMessageContaining("IN_USE");
+    }
+
     private Device createDevice(Long id, String name, String brand, DeviceState state) {
         return Device.builder()
                 .id(id)
@@ -231,3 +434,4 @@ class DeviceServiceTest {
                 .build();
     }
 }
+
