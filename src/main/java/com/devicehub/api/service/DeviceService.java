@@ -178,6 +178,34 @@ public class DeviceService {
     }
 
     /**
+     * Delete a device by ID.
+     *
+     * @param id the device ID
+     * @throws DeviceNotFoundException if device not found
+     * @throws BusinessRuleViolationException if device is IN_USE
+     */
+    @Transactional
+    public void delete(Long id) {
+        log.info("Deleting device: id={}", id);
+
+        Device device = deviceRepository.findById(id)
+                .orElseThrow(() -> {
+                    log.warn("Device not found: id={}", id);
+                    return new DeviceNotFoundException(id);
+                });
+
+        if (device.getState() == DeviceState.IN_USE) {
+            log.warn("Delete blocked: cannot delete IN_USE device: id={}, state={}", 
+                    device.getId(), device.getState());
+            throw new BusinessRuleViolationException(
+                    "Cannot delete device with state IN_USE");
+        }
+
+        deviceRepository.delete(device);
+        log.info("Device deleted successfully: id={}", id);
+    }
+
+    /**
      * Validate if update is allowed based on business rules.
      * Uses pattern matching for cleaner state validation.
      */

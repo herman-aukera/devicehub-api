@@ -424,6 +424,50 @@ class DeviceServiceTest {
                 .hasMessageContaining("IN_USE");
     }
 
+    // === DELETE OPERATIONS TESTS ===
+
+    @Test
+    void shouldDeleteDevice_whenStateIsNotInUse() {
+        // Given - device in AVAILABLE state
+        Long deviceId = 1L;
+        Device device = createDevice(deviceId, "Test Device", "TestBrand", DeviceState.AVAILABLE);
+
+        when(deviceRepository.findById(deviceId)).thenReturn(Optional.of(device));
+
+        // When - deleting device
+        deviceService.delete(deviceId);
+
+        // Then - device should be deleted
+        verify(deviceRepository).delete(device);
+    }
+
+    @Test
+    void shouldThrowBusinessRuleViolationException_whenDeletingInUseDevice() {
+        // Given - device in IN_USE state
+        Long deviceId = 1L;
+        Device device = createDevice(deviceId, "Test Device", "TestBrand", DeviceState.IN_USE);
+
+        when(deviceRepository.findById(deviceId)).thenReturn(Optional.of(device));
+
+        // When & Then - should throw exception
+        assertThatThrownBy(() -> deviceService.delete(deviceId))
+                .isInstanceOf(BusinessRuleViolationException.class)
+                .hasMessageContaining("Cannot delete device")
+                .hasMessageContaining("IN_USE");
+    }
+
+    @Test
+    void shouldThrowDeviceNotFoundException_whenDeletingNonExistentDevice() {
+        // Given - non-existent device
+        Long deviceId = 999L;
+
+        when(deviceRepository.findById(deviceId)).thenReturn(Optional.empty());
+
+        // When & Then - should throw exception
+        assertThatThrownBy(() -> deviceService.delete(deviceId))
+                .isInstanceOf(DeviceNotFoundException.class);
+    }
+
     private Device createDevice(Long id, String name, String brand, DeviceState state) {
         return Device.builder()
                 .id(id)
