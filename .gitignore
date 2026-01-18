@@ -1,0 +1,82 @@
+# Secrets and Environment
+*.env
+*.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*.jks
+application-local.properties
+application-local.yml
+
+# Database Files
+*.mv.db
+*.trace.db
+*.lock.db
+data/
+*.db
+*.sqlite
+
+# Build Output
+target/
+build/
+*.jar
+*.war
+*.ear
+*.class
+*.log
+
+# IDE - IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# IDE - Eclipse
+.settings/
+.project
+.classpath
+.factorypath
+bin/
+
+# IDE - VS Code
+.vscode/
+*.code-workspace
+
+# IDE - NetBeans
+nbproject/
+nbbuild/
+dist/
+nbdist/
+
+# OS Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# Logs
+logs/
+*.log
+*.log.*
+*.gz
+
+# Temporary Files
+*.tmp
+*.bak
+*.swp
+*.swo
+*~
+
+# Maven
+.mvn/wrapper/maven-wrapper.jar
+.mvn/timing.properties
+
+# Gradle
+.gradle/
+gradle-app.setting
