@@ -1,0 +1,28 @@
+{
+  "name": "DeviceHub",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+  "features": {
+    "ghcr.io/devcontainers/features/java:1": {
+      "version": "26",
+      "jdkDistro": "tem",
+      "installMaven": false,
+      "installGradle": false
+    }
+  },
+  "forwardPorts": [8080],
+  "portsAttributes": {
+    "8080": {
+      "label": "DeviceHub API"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "vscjava.vscode-java-pack",
+        "JetBrains.kotlin-server",
+        "vscjava.vscode-maven"
+      ]
+    }
+  },
+  "postCreateCommand": "./mvnw -B -DskipTests dependency:go-offline && ./mvnw -B test"
+}
