@@ -1,281 +1,119 @@
 # DeviceHub API
 
-A production-ready REST API for managing device resources, built with Java 21 and Spring Boot 3.2.
+DeviceHub is a REST API for managing devices and combining their stored details
+with telemetry and warranty information. Existing Java domain and service code
+coexists with an incremental Kotlin assessment feature in one Spring Boot application.
 
-## Features
+## Stack
 
-- **RESTful API** with full CRUD operations for device management
-- **Business Rule Enforcement**: Prevents modifications and deletions of in-use devices
-- **RFC 7807 Problem Details** for consistent error responses
-- **OpenAPI Documentation** with Swagger UI
-- **H2 File-Based Database** for data persistence
-- **Virtual Threads** (Java 21) for improved scalability
-- **Production-Ready Logging** with MDC support
-- **Docker Support** for containerized deployment
-- **Comprehensive Test Coverage** with unit and integration tests
+- Java 26
+- Kotlin 2.4.20 and Spring Boot 4.1.1
+- Apache Maven Wrapper, Maven 3.9.16
+- Spring MVC, Spring Data JPA, H2, and Jackson 3
+- Springdoc OpenAPI 3.1.0
+- Spring Boot-managed kotlinx-coroutines
+- JUnit, AssertJ, Mockito, and kotlinx-coroutines-test
 
-## Technology Stack
+## Development setup
 
-- **Java 21** (Amazon Corretto)
-- **Spring Boot 3.2.2**
-  - Spring Web
-  - Spring Data JPA
-  - Spring Boot Actuator
-- **H2 Database 2.2.224** (file-based persistence)
-- **SpringDoc OpenAPI 2.3.0** (Swagger)
-- **Lombok 1.18.30**
-- **Logback** for logging
-- **JUnit 5** + **Mockito** for testing
+Install a stable JDK 26 and select it with JAVA_HOME for your shell or IDE.
+The Maven Wrapper downloads Maven 3.9.16; system Maven is not required.
 
-## Quick Start
+Windows:
 
-### Prerequisites
+```bat
+mvnw.cmd clean test
+mvnw.cmd clean package
+mvnw.cmd spring-boot:run
+```
 
-- Java 21 or later
-- Maven 3.9+ (or use the included wrapper)
-
-### Build and Run
+Linux, macOS, Git Bash, or Codespaces:
 
 ```bash
-# Build the project
+./mvnw clean test
 ./mvnw clean package
-
-# Run the application
 ./mvnw spring-boot:run
+```
 
-# Or run the JAR
+Alternatively, run the packaged application:
+
+```bash
 java -jar target/devicehub-api-1.0.0.jar
 ```
 
-The API will be available at `http://localhost:8080`.
+The service listens on port 8080. The default H2 database is stored under
+`data/`; the test profile uses an in-memory database.
 
-### Docker
+In IntelliJ, open the root `pom.xml`, select JDK 26 as the project SDK and Maven
+importer JDK, and use Maven Wrapper as Maven home. For Windows Git Bash, use
+`"C:\Program Files\Git\bin\bash.exe" --login -i` as the terminal shell.
 
-```bash
-# Build Docker image
-docker-compose build
+## Codespaces
 
-# Start services
-docker-compose up -d
+Create or rebuild a Codespace from this branch. The devcontainer uses the
+official Java feature with Temurin 26, forwards port 8080 as **DeviceHub API**,
+and provides Java, Kotlin, and Maven editor extensions. It uses the project
+wrapper rather than installing Maven through the feature.
 
-# View logs
-docker-compose logs -f app
+The post-create command downloads dependencies and runs the test suite.
+Then start the service with `./mvnw spring-boot:run`. Use the forwarded port
+to open Swagger UI. Remote execution must be validated in your Codespace;
+local build success alone does not prove the remote environment works.
 
-# Stop services
-docker-compose down
-```
+## API
 
-## API Endpoints
+| Method | Endpoint | Purpose |
+|---|---|---|
+| POST | /api/devices | Create a device |
+| GET | /api/devices | List devices; optional brand and state filters |
+| GET | /api/devices/{id} | Read a device |
+| PUT | /api/devices/{id} | Update a device |
+| PATCH | /api/devices/{id} | Partially update a device |
+| DELETE | /api/devices/{id} | Delete a device |
+| GET | /api/devices/{id}/assessment | Combine device and partner data |
+| GET | /actuator/health | Health status |
+| GET | /v3/api-docs | OpenAPI JSON |
+| GET | /swagger-ui.html | Swagger UI, with redirect |
 
-### Device Management
-
-| Method   | Endpoint            | Description                           |
-| -------- | ------------------- | ------------------------------------- |
-| `POST`   | `/api/devices`      | Create a new device                   |
-| `GET`    | `/api/devices/{id}` | Get device by ID                      |
-| `GET`    | `/api/devices`      | List all devices (supports filtering) |
-| `PUT`    | `/api/devices/{id}` | Update device (full)                  |
-| `PATCH`  | `/api/devices/{id}` | Update device (partial)               |
-| `DELETE` | `/api/devices/{id}` | Delete device                         |
-
-### Query Parameters
-
-- `brand`: Filter devices by brand (case-insensitive)
-- `state`: Filter devices by state (`AVAILABLE`, `IN_USE`, `INACTIVE`)
-
-### Health Check
-
-| Method | Endpoint           | Description               |
-| ------ | ------------------ | ------------------------- |
-| `GET`  | `/actuator/health` | Application health status |
-
-### API Documentation
-
-- Swagger UI: `http://localhost:8080/swagger-ui.html`
-- OpenAPI JSON: `http://localhost:8080/v3/api-docs`
-
-## Device Model
-
-```json
-{
-  "id": 1,
-  "name": "MacBook Pro",
-  "brand": "Apple",
-  "state": "AVAILABLE",
-  "creationTime": "2026-01-18T10:30:00"
-}
-```
-
-### States
-
-- **AVAILABLE**: Device is available for use
-- **IN_USE**: Device is currently in use
-- **INACTIVE**: Device is inactive or out of service
-
-## Business Rules
-
-1. **Name/Brand Immutability**: Cannot update `name` or `brand` when device `state` is `IN_USE`
-2. **Deletion Restriction**: Cannot delete devices with `state` set to `IN_USE`
-3. **Creation Time Immutability**: `creationTime` is set automatically and cannot be updated
-
-## Example Requests
-
-### Create Device
+Devices have `name`, `brand`, `state`, and an immutable `creationTime`.
+States are AVAILABLE, IN_USE, and INACTIVE. An IN_USE device cannot be deleted
+or have its name or brand changed.
 
 ```bash
-curl -X POST http://localhost:8080/api/devices \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "MacBook Pro 16",
-    "brand": "Apple",
-    "state": "AVAILABLE"
-  }'
+curl --fail -H 'Content-Type: application/json' \
+  -d '{"name":"MacBook Pro","brand":"Apple","state":"AVAILABLE"}' \
+  http://localhost:8080/api/devices
+
+# Use the ID returned by the create response:
+curl --fail http://localhost:8080/api/devices/1/assessment
 ```
-
-**Response** (201 Created):
-```json
-{
-  "id": 1,
-  "name": "MacBook Pro 16",
-  "brand": "Apple",
-  "state": "AVAILABLE",
-  "creationTime": "2026-01-18T10:30:00.123"
-}
-```
-
-### Get Device
-
-```bash
-curl http://localhost:8080/api/devices/1
-```
-
-**Response** (200 OK):
-```json
-{
-  "id": 1,
-  "name": "MacBook Pro 16",
-  "brand": "Apple",
-  "state": "AVAILABLE",
-  "creationTime": "2026-01-18T10:30:00.123"
-}
-```
-
-### List Devices (Filtered)
-
-```bash
-# Filter by brand
-curl "http://localhost:8080/api/devices?brand=Apple"
-
-# Filter by state
-curl "http://localhost:8080/api/devices?state=IN_USE"
-```
-
-### Update Device
-
-```bash
-curl -X PUT http://localhost:8080/api/devices/1 \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "MacBook Pro 16",
-    "brand": "Apple",
-    "state": "IN_USE"
-  }'
-```
-
-### Partial Update
-
-```bash
-curl -X PATCH http://localhost:8080/api/devices/1 \
-  -H "Content-Type: application/json" \
-  -d '{
-    "state": "INACTIVE"
-  }'
-```
-
-### Delete Device
-
-```bash
-curl -X DELETE http://localhost:8080/api/devices/1
-```
-
-**Response** (204 No Content)
-
-## Error Handling
-
-The API uses RFC 7807 Problem Details for HTTP APIs. All errors return a consistent structure:
-
-```json
-{
-  "type": "https://devicehub.api/errors/device-not-found",
-  "title": "Device Not Found",
-  "status": 404,
-  "detail": "Device not found with id: 999",
-  "instance": "/api/devices/999",
-  "timestamp": "2026-01-18T10:30:00.123Z"
-}
-```
-
-### HTTP Status Codes
-
-- `200 OK`: Successful GET/PUT/PATCH
-- `201 Created`: Successful POST
-- `204 No Content`: Successful DELETE
-- `400 Bad Request`: Validation error
-- `404 Not Found`: Resource not found
-- `409 Conflict`: Business rule violation
-- `500 Internal Server Error`: Unexpected error
-
-## Testing
-
-```bash
-# Run all tests
-./mvnw test
-
-# Run specific test class
-./mvnw test -Dtest=DeviceServiceTest
-
-# Run with coverage
-./mvnw clean test jacoco:report
-```
-
-### Test Coverage
-
-- **Unit Tests**: Service layer, Repository layer, Domain model
-- **Integration Tests**: Controller layer with @WebMvcTest
-- **End-to-End Tests**: Full stack tests with @SpringBootTest
-
-Total: 49 tests
 
 ## Kotlin Coroutines Assessment
 
-The original application remains Java 21 + Spring Boot 3.2.2. Kotlin 1.9.22 is
-introduced incrementally, reusing the existing Java `DeviceService` and
-`DeviceResponse`. The assessment queries two independent partner gateways:
-telemetry and warranty run concurrently with `async`/`await` inside
-`coroutineScope`. Both results are mandatory.
+The Kotlin controller and service reuse Java `DeviceService` and
+`DeviceResponse`. The JPA-backed device lookup remains blocking and runs
+before the partner deadline. Java virtual threads remain enabled.
 
-Structured concurrency ties child lifecycles to the request: a partner failure
-cancels its sibling, and a one-second partner deadline cancels both calls.
-The device lookup happens before that deadline; JPA remains blocking. Java
-virtual threads remain enabled, and no custom virtual-thread-backed
-`CoroutineDispatcher` is used. Flow is intentionally not used because this
-endpoint returns one aggregate value.
+Telemetry and warranty are independent, mandatory results. Both start with
+`async` before either is awaited inside `coroutineScope`. Structured
+concurrency ties child lifecycles to the request: partner failure cancels the
+sibling, and the 1000 ms partner timeout cancels both operations. No explicit
+dispatcher or custom virtual-thread-backed CoroutineDispatcher is used.
 
-The demo adapters are local and deterministic, using suspending delays of
-200 ms for telemetry and 350 ms for warranty. They are simulated integrations,
-and no external API credentials are required.
+Flow is intentionally absent because the endpoint returns one aggregate value.
+The local demo adapters use suspending delays of 200 and 350 ms and fixed
+responses. They are simulations; no external API credentials are required.
 
 ```text
-GET /api/devices/{id}/assessment
-  -> DeviceAssessmentService
-     -> Java DeviceService -> JPA (blocking)
-     -> 1000 ms timeout / coroutineScope
-        +-> async TelemetryGateway
-        +-> async WarrantyGateway
-        -> await both -> DeviceAssessment
+Assessment controller
+  -> Java DeviceService -> JPA (blocking)
+  -> 1000 ms timeout / coroutineScope
+     +-> async TelemetryGateway
+     +-> async WarrantyGateway
+     -> await both -> DeviceAssessment
 ```
 
-`GET /api/devices/{id}/assessment` returns HTTP 200, for example:
+Example HTTP 200 response:
 
 ```json
 {
@@ -299,151 +137,35 @@ GET /api/devices/{id}/assessment
 }
 ```
 
-`warranty.expiresOn` may be null when the expiration date is unknown.
-Missing devices return 404; partner integration failures return 502; assessment
-timeouts return 504, using the existing RFC 7807 error format.
+Warranty expiration can be null when unknown. Errors use RFC 7807 Problem
+Details: 400 for validation, 404 for a missing device, 409 for a business-rule
+violation, 502 for partner integration failure, and 504 for assessment timeout.
+Partner causes are not exposed in the response.
 
-Coroutine tests use virtual time to prove concurrent completion at 350 ms,
-sibling cancellation on failure, and cancellation at the 1000 ms deadline.
-The endpoint integration test uses MockMvc async dispatch with the actual demo
-gateway beans.
+## Tests
 
-## Configuration
+The suite contains 49 tests. Coroutine tests use virtual time to assert
+350 ms concurrent completion, sibling cancellation, and the 1000 ms timeout.
+The assessment MVC integration test uses async dispatch and the real demo
+adapters. Health is checked through full-context MockMvc.
 
-### Application Properties
-
-Key configurations in `application.properties`:
-
-```properties
-# Server
-server.port=8080
-
-# Virtual Threads (Java 21)
-spring.threads.virtual.enabled=true
-
-# H2 Database (File-based)
-spring.datasource.url=jdbc:h2:file:./data/devicehub
-spring.datasource.driverClassName=org.h2.Driver
-
-# JPA
-spring.jpa.hibernate.ddl-auto=update
-
-# OpenAPI
-springdoc.api-docs.path=/v3/api-docs
-springdoc.swagger-ui.path=/swagger-ui.html
-```
-
-### Profiles
-
-- **default**: Production configuration
-- **dev**: Development configuration (verbose logging)
-- **test**: Test configuration (in-memory H2)
-
-Activate profile:
 ```bash
-./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+./mvnw -B clean test
+./mvnw -B clean package
 ```
 
-## Database
+## Docker
 
-The application uses H2 database in file-based mode. Data is persisted in `./data/devicehub.mv.db`.
+The multi-stage image builds with Maven 3.9.16 and Java 26, then runs on a
+Temurin 26 JRE as a non-root user. Compose binds `./data` for persistence and
+publishes port 8080. The image includes a health check.
 
-### H2 Console (Development)
-
-The H2 console is disabled by default. To enable it for development:
-
-```properties
-# application-dev.properties
-spring.h2.console.enabled=true
+```bash
+docker build -t devicehub-api:local .
+docker compose up -d --build
+curl --fail http://localhost:8080/actuator/health
+docker compose down
 ```
 
-Access at: `http://localhost:8080/h2-console`
-
-- **JDBC URL**: `jdbc:h2:file:./data/devicehub`
-- **Username**: `sa`
-- **Password**: (empty)
-
-## Logging
-
-Structured logging with MDC (Mapped Diagnostic Context) support:
-
-```properties
-# Logging levels
-logging.level.root=INFO
-logging.level.com.devicehub.api=DEBUG
-```
-
-Log pattern includes:
-- Timestamp
-- Thread name
-- Log level
-- Logger name
-- Request ID (MDC)
-- Message
-
-## Security Considerations
-
-- Sensitive configuration in `.env` file (excluded from git)
-- Database files excluded from version control
-- No hardcoded credentials
-- CORS configured for production
-
-## Development
-
-### Project Structure
-
-```
-devicehub-api/
-├── src/
-│   ├── main/
-│   │   ├── java/com/devicehub/api/
-│   │   │   ├── controller/      # REST controllers
-│   │   │   ├── service/          # Business logic
-│   │   │   ├── repository/       # Data access
-│   │   │   ├── domain/           # Entities and enums
-│   │   │   ├── dto/              # DTOs (Records)
-│   │   │   └── exception/        # Custom exceptions
-│   │   └── resources/
-│   │       ├── application.properties
-│   │       ├── application-dev.properties
-│   │       ├── application-test.properties
-│   │       └── logback-spring.xml
-│   └── test/
-│       └── java/com/devicehub/api/
-│           ├── controller/       # Controller tests
-│           ├── service/          # Service tests
-│           ├── repository/       # Repository tests
-│           ├── domain/           # Entity tests
-│           └── integration/      # E2E tests
-├── .gitignore
-├── .gitattributes
-├── .env.example
-├── Dockerfile
-├── docker-compose.yml
-├── pom.xml
-└── README.md
-```
-
-### Code Style
-
-- **TDD Methodology**: Tests written before implementation
-- **Atomic Commits**: Each feature/fix in separate commit
-- **Conventional Commits**: Commit messages follow convention
-- **Java 21 Features**: Records for DTOs, pattern matching, virtual threads
-- **Clean Code**: Single Responsibility Principle, meaningful names
-
-### Contributing
-
-1. Write tests first (TDD)
-2. Follow existing code style
-3. Keep commits atomic
-4. Add API documentation
-5. Update README if needed
-
-## License
-
-This project is a coding challenge/interview project.
-
-## Author
-
-Built with Java 21 and Spring Boot 3.2.
+Compose accepts SERVER_PORT, SPRING_PROFILES_ACTIVE, and LOG_LEVEL environment
+overrides. Do not commit database files, secrets, or local IDE configuration.
