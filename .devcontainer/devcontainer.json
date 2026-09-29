@@ -7,21 +7,43 @@
       "jdkDistro": "tem",
       "installMaven": false,
       "installGradle": false
-    }
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {}
   },
+  "remoteUser": "vscode",
   "forwardPorts": [8080],
   "portsAttributes": {
     "8080": {
-      "label": "DeviceHub API"
+      "label": "DeviceHub API",
+      "onAutoForward": "notify"
     }
   },
   "customizations": {
+    "codespaces": {
+      "openFiles": [
+        "README.md",
+        "src/main/kotlin/com/devicehub/api/assessment/DeviceAssessmentService.kt",
+        "src/test/kotlin/com/devicehub/api/assessment/DeviceAssessmentServiceTest.kt"
+      ]
+    },
     "vscode": {
       "extensions": [
         "vscjava.vscode-java-pack",
         "JetBrains.kotlin-server",
-        "vscjava.vscode-maven"
-      ]
+        "vscjava.vscode-maven",
+        "GitHub.vscode-github-actions",
+        "GitHub.copilot",
+        "GitHub.copilot-chat",
+        "saoudrizwan.claude-dev"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "terminal.integrated.profiles.linux": {
+          "bash": {
+            "path": "/bin/bash"
+          }
+        }
+      }
     }
   },
   "postCreateCommand": "./mvnw -B -DskipTests dependency:go-offline && ./mvnw -B test"
