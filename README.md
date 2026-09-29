@@ -244,7 +244,69 @@ The API uses RFC 7807 Problem Details for HTTP APIs. All errors return a consist
 - **Integration Tests**: Controller layer with @WebMvcTest
 - **End-to-End Tests**: Full stack tests with @SpringBootTest
 
-Total: 44 tests
+Total: 49 tests
+
+## Kotlin Coroutines Assessment
+
+The original application remains Java 21 + Spring Boot 3.2.2. Kotlin 1.9.22 is
+introduced incrementally, reusing the existing Java `DeviceService` and
+`DeviceResponse`. The assessment queries two independent partner gateways:
+telemetry and warranty run concurrently with `async`/`await` inside
+`coroutineScope`. Both results are mandatory.
+
+Structured concurrency ties child lifecycles to the request: a partner failure
+cancels its sibling, and a one-second partner deadline cancels both calls.
+The device lookup happens before that deadline; JPA remains blocking. Java
+virtual threads remain enabled, and no custom virtual-thread-backed
+`CoroutineDispatcher` is used. Flow is intentionally not used because this
+endpoint returns one aggregate value.
+
+The demo adapters are local and deterministic, using suspending delays of
+200 ms for telemetry and 350 ms for warranty. They are simulated integrations,
+and no external API credentials are required.
+
+```text
+GET /api/devices/{id}/assessment
+  -> DeviceAssessmentService
+     -> Java DeviceService -> JPA (blocking)
+     -> 1000 ms timeout / coroutineScope
+        +-> async TelemetryGateway
+        +-> async WarrantyGateway
+        -> await both -> DeviceAssessment
+```
+
+`GET /api/devices/{id}/assessment` returns HTTP 200, for example:
+
+```json
+{
+  "device": {
+    "id": 1,
+    "name": "MacBook Pro",
+    "brand": "Apple",
+    "state": "AVAILABLE",
+    "creationTime": "2026-09-29T12:00:00"
+  },
+  "telemetry": {
+    "status": "ONLINE",
+    "batteryPercent": 87,
+    "lastSeenAt": "2026-09-29T12:00:00Z"
+  },
+  "warranty": {
+    "covered": true,
+    "provider": "DeviceProtect",
+    "expiresOn": "2027-12-31"
+  }
+}
+```
+
+`warranty.expiresOn` may be null when the expiration date is unknown.
+Missing devices return 404; partner integration failures return 502; assessment
+timeouts return 504, using the existing RFC 7807 error format.
+
+Coroutine tests use virtual time to prove concurrent completion at 350 ms,
+sibling cancellation on failure, and cancellation at the 1000 ms deadline.
+The endpoint integration test uses MockMvc async dispatch with the actual demo
+gateway beans.
 
 ## Configuration
 
