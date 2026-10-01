@@ -22,8 +22,8 @@
     "codespaces": {
       "openFiles": [
         "README.md",
-        "src/main/kotlin/com/devicehub/api/assessment/DeviceAssessmentService.kt",
-        "src/test/kotlin/com/devicehub/api/assessment/DeviceAssessmentServiceTest.kt"
+        "src/main/kotlin/com/devicehub/api/service/DeviceAssessmentService.kt",
+        "src/test/kotlin/com/devicehub/api/service/DeviceAssessmentServiceTest.kt"
       ]
     },
     "vscode": {

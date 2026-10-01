@@ -1,10 +1,15 @@
-package com.devicehub.api.assessment
+package com.devicehub.api.service
 
 import com.devicehub.api.domain.DeviceState
+import com.devicehub.api.dto.DeviceAssessment
 import com.devicehub.api.dto.DeviceResponse
+import com.devicehub.api.dto.TelemetrySnapshot
+import com.devicehub.api.dto.TelemetryStatus
+import com.devicehub.api.dto.WarrantyInfo
 import com.devicehub.api.exception.AssessmentTimeoutException
 import com.devicehub.api.exception.PartnerIntegrationException
-import com.devicehub.api.service.DeviceService
+import com.devicehub.api.integration.TelemetryGateway
+import com.devicehub.api.integration.WarrantyGateway
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.delay
@@ -20,18 +25,30 @@ import java.time.LocalDateTime
 @OptIn(ExperimentalCoroutinesApi::class)
 class DeviceAssessmentServiceTest {
     private val device = DeviceResponse(
-        1L, "MacBook Pro", "Apple", DeviceState.AVAILABLE,
+        1L,
+        "MacBook Pro",
+        "Apple",
+        DeviceState.AVAILABLE,
         LocalDateTime.parse("2026-09-29T12:00:00")
     )
+
     private val telemetry = TelemetrySnapshot(
-        TelemetryStatus.ONLINE, 87, Instant.parse("2026-09-29T12:00:00Z")
+        TelemetryStatus.ONLINE,
+        87,
+        Instant.parse("2026-09-29T12:00:00Z")
     )
-    private val warranty = WarrantyInfo(true, "DeviceProtect", LocalDate.parse("2027-12-31"))
+
+    private val warranty = WarrantyInfo(
+        true,
+        "DeviceProtect",
+        LocalDate.parse("2027-12-31")
+    )
+
     private val deviceService = Mockito.mock(DeviceService::class.java).also {
         Mockito.`when`(it.findById(1L)).thenReturn(device)
     }
 
-    private fun service(
+    private fun createService(
         telemetryCall: suspend () -> TelemetrySnapshot,
         warrantyCall: suspend () -> WarrantyInfo
     ) = DeviceAssessmentService(
@@ -45,30 +62,38 @@ class DeviceAssessmentServiceTest {
     )
 
     @Test
-    fun assessmentReturnsCombinedPartnerData() = runTest {
-        val result = service({ telemetry }, { warranty }).assess(1L)
+    fun shouldReturnCombinedPartnerData_whenAssessmentSucceeds() = runTest {
+        // When
+        val result = createService({ telemetry }, { warranty }).assess(1L)
 
+        // Then
         assertThat(result.device).isSameAs(device)
         assertThat(result.telemetry).isEqualTo(telemetry)
         assertThat(result.warranty).isEqualTo(warranty)
     }
 
     @Test
-    fun partnerCallsRunConcurrently() = runTest {
-        val result = service(
+    fun shouldRunPartnerCallsConcurrently_whenAssessingDevice() = runTest {
+        // When
+        val result = createService(
             { delay(200); telemetry },
             { delay(350); warranty }
         ).assess(1L)
 
+        // Then
         assertThat(result).isEqualTo(DeviceAssessment(device, telemetry, warranty))
         assertThat(currentTime).isEqualTo(350L)
     }
 
     @Test
-    fun partnerFailureCancelsSibling() = runTest {
-        val failure = PartnerIntegrationException("telemetry", IllegalStateException("unavailable"))
+    fun shouldCancelSibling_whenPartnerFails() = runTest {
+        // Given
+        val failure = PartnerIntegrationException(
+            "telemetry",
+            IllegalStateException("unavailable")
+        )
         var siblingCancelled = false
-        val assessmentService = service(
+        val assessmentService = createService(
             { delay(100); throw failure },
             {
                 try {
@@ -78,25 +103,25 @@ class DeviceAssessmentServiceTest {
                 }
             }
         )
-        var propagated: PartnerIntegrationException? = null
 
-        try {
+        // When
+        val propagated = runCatching {
             assessmentService.assess(1L)
-        } catch (ex: PartnerIntegrationException) {
-            propagated = ex
-        }
+        }.exceptionOrNull()
 
+        // Then
         assertThat(propagated).isSameAs(failure)
         assertThat(siblingCancelled).isTrue()
     }
 
     @Test
-    fun assessmentTimeoutCancelsPartnerCalls() = runTest {
+    fun shouldCancelPartnerCalls_whenAssessmentTimesOut() = runTest {
+        // Given
         var telemetryStarted = false
         var warrantyStarted = false
         var telemetryCancelled = false
         var warrantyCancelled = false
-        val assessmentService = service(
+        val assessmentService = createService(
             {
                 telemetryStarted = true
                 try {
@@ -116,15 +141,14 @@ class DeviceAssessmentServiceTest {
                 }
             }
         )
-        var timeout: AssessmentTimeoutException? = null
 
-        try {
+        // When
+        val timeout = runCatching {
             assessmentService.assess(1L)
-        } catch (ex: AssessmentTimeoutException) {
-            timeout = ex
-        }
+        }.exceptionOrNull()
 
-        assertThat(timeout).isNotNull()
+        // Then
+        assertThat(timeout).isInstanceOf(AssessmentTimeoutException::class.java)
         assertThat(currentTime).isEqualTo(1000L)
         assertThat(telemetryStarted).isTrue()
         assertThat(warrantyStarted).isTrue()

@@ -1,4 +1,4 @@
-package com.devicehub.api.assessment
+package com.devicehub.api.integration
 
 import com.devicehub.api.domain.Device
 import com.devicehub.api.domain.DeviceState
@@ -7,8 +7,8 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch
@@ -20,7 +20,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-class DeviceAssessmentControllerTest {
+class DeviceAssessmentApiIntegrationTest {
     @Autowired
     private lateinit var mockMvc: MockMvc
 
@@ -38,7 +38,8 @@ class DeviceAssessmentControllerTest {
     }
 
     @Test
-    fun assessmentEndpointReturnsCombinedResponse() {
+    fun shouldReturnCombinedResponse_whenAssessmentEndpointSucceeds() {
+        // Given
         val saved = deviceRepository.saveAndFlush(
             Device.builder()
                 .name("MacBook Pro")
@@ -47,10 +48,12 @@ class DeviceAssessmentControllerTest {
                 .build()
         )
 
+        // When
         val result = mockMvc.perform(get("/api/devices/{id}/assessment", saved.id))
             .andExpect(request().asyncStarted())
             .andReturn()
 
+        // Then
         mockMvc.perform(asyncDispatch(result))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.device.id").value(saved.id))

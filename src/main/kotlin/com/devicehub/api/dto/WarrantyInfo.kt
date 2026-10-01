@@ -1,4 +1,4 @@
-package com.devicehub.api.assessment
+package com.devicehub.api.dto
 
 import java.time.LocalDate
 

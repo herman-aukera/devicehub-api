@@ -1,6 +1,4 @@
-package com.devicehub.api.assessment
-
-import com.devicehub.api.dto.DeviceResponse
+package com.devicehub.api.dto
 
 data class DeviceAssessment(
     val device: DeviceResponse,
