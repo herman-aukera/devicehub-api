@@ -22,6 +22,38 @@ import java.util.Map;
 @Slf4j
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(PartnerIntegrationException.class)
+    @ResponseStatus(HttpStatus.BAD_GATEWAY)
+    public ProblemDetail handlePartnerIntegrationException(PartnerIntegrationException ex) {
+        log.warn("Partner integration failed: {}", ex.getMessage());
+
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+                HttpStatus.BAD_GATEWAY,
+                ex.getMessage()
+        );
+        problemDetail.setTitle("Partner Integration Failure");
+        problemDetail.setType(URI.create("https://devicehub.api/errors/partner-integration-failure"));
+        problemDetail.setProperty("timestamp", Instant.now());
+
+        return problemDetail;
+    }
+
+    @ExceptionHandler(AssessmentTimeoutException.class)
+    @ResponseStatus(HttpStatus.GATEWAY_TIMEOUT)
+    public ProblemDetail handleAssessmentTimeoutException(AssessmentTimeoutException ex) {
+        log.warn("Assessment timed out: {}", ex.getMessage());
+
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+                HttpStatus.GATEWAY_TIMEOUT,
+                ex.getMessage()
+        );
+        problemDetail.setTitle("Assessment Timeout");
+        problemDetail.setType(URI.create("https://devicehub.api/errors/assessment-timeout"));
+        problemDetail.setProperty("timestamp", Instant.now());
+
+        return problemDetail;
+    }
+
     /**
      * Handle DeviceNotFoundException - returns 404 Not Found.
      */

@@ -1,0 +1,49 @@
+name: Devcontainer validation
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.devcontainer/**'
+      - '.mvn/**'
+      - 'mvnw'
+      - 'mvnw.cmd'
+      - 'pom.xml'
+      - '.github/workflows/devcontainer-validation.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-devcontainer:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Validate devcontainer JSON contract
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          data = json.loads(Path('.devcontainer/devcontainer.json').read_text(encoding='utf-8'))
+          assert data['remoteUser'] == 'vscode', data.get('remoteUser')
+          assert 8080 in data['forwardPorts'], data.get('forwardPorts')
+          print('devcontainer JSON contract passed')
+          PY
+
+      - name: Build and validate devcontainer
+        uses: devcontainers/ci@513af61f4de4f75d37e4438f184ba4358f0fc1ca # v0.3
+        with:
+          configFile: .devcontainer/devcontainer.json
+          push: never
+          runCmd: |
+            set -eu
+            whoami
+            test "$(whoami)" = "vscode"
+            java -version
+            ./mvnw -version
+            git --version
+            gh --version
+            ./mvnw -B clean test

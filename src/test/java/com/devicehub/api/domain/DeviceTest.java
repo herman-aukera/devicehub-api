@@ -2,8 +2,8 @@ package com.devicehub.api.domain;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.test.context.ActiveProfiles;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -44,16 +44,19 @@ class DeviceTest {
                 .build();
 
         Device savedDevice = entityManager.persistAndFlush(device);
-        var originalCreationTime = savedDevice.getCreationTime();
+        Long deviceId = savedDevice.getId();
 
         entityManager.clear();
 
         // When - updating device
-        Device foundDevice = entityManager.find(Device.class, savedDevice.getId());
+        Device foundDevice = entityManager.find(Device.class, deviceId);
+        var originalCreationTime = foundDevice.getCreationTime();
         foundDevice.setName("iPad Pro 12.9");
-        entityManager.persistAndFlush(foundDevice);
+        entityManager.flush();
+        entityManager.clear();
+        Device reloadedDevice = entityManager.find(Device.class, deviceId);
 
         // Then - creationTime should remain unchanged
-        assertThat(foundDevice.getCreationTime()).isEqualTo(originalCreationTime);
+        assertThat(reloadedDevice.getCreationTime()).isEqualTo(originalCreationTime);
     }
 }

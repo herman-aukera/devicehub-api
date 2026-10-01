@@ -7,11 +7,11 @@ import com.devicehub.api.dto.DeviceUpdateRequest;
 import com.devicehub.api.exception.BusinessRuleViolationException;
 import com.devicehub.api.exception.DeviceNotFoundException;
 import com.devicehub.api.service.DeviceService;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -33,9 +33,9 @@ class DeviceControllerTest {
     private MockMvc mockMvc;
 
     @Autowired
-    private ObjectMapper objectMapper;
+    private JsonMapper objectMapper;
 
-    @MockBean
+    @MockitoBean
     private DeviceService deviceService;
 
     // === CREATE OPERATION TESTS ===
